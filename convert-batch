@@ -1,83 +1,81 @@
 #!/bin/bash
-while getopts "df:m:o:rs:q:t:x:z" flag
+while getopts "d:f:m:o:q:x:s:r:znl" flag
 do
   case $flag in
-    d ) dryrun=y;;
+    d ) size=$OPTARG;;
     f ) sourcedir=$OPTARG;;
     m ) match=$OPTARG;;
     o ) destdir=$OPTARG;;
-    r ) relative_output=y;;
-    s ) size=$OPTARG;;
     q ) quality=$OPTARG;;
-    t ) type=$OPTARG;;
     x ) exclude=$OPTARG;;
+    r ) replace=$OPTARG;;
     z ) zoom=y;;
+    n ) dryrun=y;;
+    l ) relative_output=y;;
   esac
 done
 shift $((OPTIND-1)); OPTIND=1
 
 if [ -z "$size" ]; then
-  echo "USAGE: batch_jpeg -s <size> [ -z ] [ -q <quality (70)> ]
-       [ -t <source type (jpg)> ] [ -e <exclude filename pattern> ]
-       [ -f <from dir> ] [ -o <destination dir> ] [ -r ]
+  echo "USAGE: batch_jpeg -d <geometry> [ -z ] [ -q <quality (70)> ]
+       [ -m <match pattern (*.jpg)> ] [ -e <exclude pattern> ]
+       [ -f <from dir> ] [ -o <destination dir> ] [ -l ] [ -n ]
 OPTIONS:
-  -d  Do a dry run while outputing source and output filenames.
-  -f  All images in this directory and subdirectories, except those excluded
-      with -x, are processed.
-  -m  Pattern to match files for processing.
-  -o  Output directory, overrides -b and -r. If neither -b, -r, or -o are
-      given, images are resized in place.
-  -r  Output directory is created relative to each file. If -e is not given, it
+  -d  Output image dimensions, as <width>x<height>.
+  -f  Path to search within for source images. All images in this directory and
+      subdirectories, except those excluded with -x, are processed. Defaults to
+      the current directory.
+  -m  Pattern to match files for processing, default *.jpg.
+  -o  Output directory. The subdirectory structure of the source directory will
+      be copied. Without this option, images are resized in place.
+  -l  Output directory is created relative to each file. If -e is not given, it
       is set to exclude this directory.
-  -s  Output image size, as <width>x<height>.
   -q  Quality, 0-100, default 70.
-  -t  Type, default 'jpg'.
-  -e  Exclude file pattern.
-  -z  Zoom image to fill new ratio. By default, the image is resized to fit
-      size."
+  -e  Exclude file pattern. If -l is used, this defaults to exclude that
+      path.
+  -r  PERL regular expression to transform the output filenames.
+  -z  Zoom image to fill new ratio. Without this option the image aspect is
+      preserved.
+  -n  Print the source and output filenames without writing any files or
+      creating any directories."
   exit 0
 fi
 wd=`pwd`
 if [ -z "$sourcedir" ]; then sourcedir="$wd"; fi
 if [ -z "$destdir" -a -z "$relative_output" ]; then destdir="$sourcedir"; fi
+if [ -z "$match" ]; then match=\*.jpg; fi
 if [ -z "$quality" ]; then quality=70; fi
-if [ -z "$type" ]; then type=jpg; fi
 if [ -n "$destdir" -a -z "$relative_output" -a ${destdir:0:1} != "/" ]; then
   # -r not set, make destdir an absolute path
   destdir="$wd/$destdir"
 fi
 if [ "$relative_output" = y -a -z "$exclude" ]; then
-  exclude="\*$destdir\*"
+  exclude=\*$destdir\*
 fi
 cd "$sourcedir"
-if [ -n "$match" ]; then
-  matchedfiles=`find . -path $match`
-  if [ -z "$matchedfiles" ]; then
-    echo "no matched files"
-    exit 0
-  fi
-fi
 if [ -n "$exclude" ]; then
-  excludefiles=`find . -path $exclude`
+  excludefiles=$(find . -path "$exclude")
 fi
 SAVEIFS=$IFS
 IFS=$(echo -en "\n\b")
 if [ "$dryrun" = y ]; then
   echo "DRY RUN"
 fi
-for file in $(find . -name \*.$type); do
+for file in $(find . -path "$match"); do
   if [ -n "$exclude" -a -n "`echo $excludefiles | grep $file`" ]; then
     # skip excluded files
     continue
-  elif [ -n "$match" -a -z "`echo $matchedfiles | grep $file`" ]; then
-    # skip unmatched files
-    continue
   fi
   src="$file"
-  if [ "$relative_output" = y ]; then
-    output="`dirname $file`/$destdir/`basename $file`"
+  if [ -n "$replace" ]; then
+    output_basename=$(basename $file | perl -pe "s$replace")
   else
-    output="$destdir/$file"
+    output_basename=`basename $file`
+  fi
+  if [ "$relative_output" = y ]; then
+    output="`dirname $file`/$destdir/$output_basename"
+  else
+    output="$destdir/$output_basename"
   fi
   echo -e "\nSOURCE: $file\nOUTPUT: $output"
   if [ -z "$dryrun" ]; then
