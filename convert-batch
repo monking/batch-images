@@ -1,0 +1,92 @@
+#!/bin/bash
+while getopts "df:m:o:rs:q:t:x:z" flag
+do
+  case $flag in
+    d ) dryrun=y;;
+    f ) sourcedir=$OPTARG;;
+    m ) match=$OPTARG;;
+    o ) destdir=$OPTARG;;
+    r ) relative_output=y;;
+    s ) size=$OPTARG;;
+    q ) quality=$OPTARG;;
+    t ) type=$OPTARG;;
+    x ) exclude=$OPTARG;;
+    z ) zoom=y;;
+  esac
+done
+shift $((OPTIND-1)); OPTIND=1
+
+if [ -z "$size" ]; then
+  echo "USAGE: batch_jpeg -s <size> [ -z ] [ -q <quality (70)> ]
+       [ -t <source type (jpg)> ] [ -e <exclude filename pattern> ]
+       [ -f <from dir> ] [ -o <destination dir> ] [ -r ]
+OPTIONS:
+  -d  Do a dry run while outputing source and output filenames.
+  -f  All images in this directory and subdirectories, except those excluded
+      with -x, are processed.
+  -m  Pattern to match files for processing.
+  -o  Output directory, overrides -b and -r. If neither -b, -r, or -o are
+      given, images are resized in place.
+  -r  Output directory is created relative to each file. If -e is not given, it
+      is set to exclude this directory.
+  -s  Output image size, as <width>x<height>.
+  -q  Quality, 0-100, default 70.
+  -t  Type, default 'jpg'.
+  -e  Exclude file pattern.
+  -z  Zoom image to fill new ratio. By default, the image is resized to fit
+      size."
+  exit 0
+fi
+wd=`pwd`
+if [ -z "$sourcedir" ]; then sourcedir="$wd"; fi
+if [ -z "$destdir" -a -z "$relative_output" ]; then destdir="$sourcedir"; fi
+if [ -z "$quality" ]; then quality=70; fi
+if [ -z "$type" ]; then type=jpg; fi
+if [ -n "$destdir" -a -z "$relative_output" -a ${destdir:0:1} != "/" ]; then
+  # -r not set, make destdir an absolute path
+  destdir="$wd/$destdir"
+fi
+if [ "$relative_output" = y -a -z "$exclude" ]; then
+  exclude="\*$destdir\*"
+fi
+cd "$sourcedir"
+if [ -n "$match" ]; then
+  matchedfiles=`find . -path $match`
+  if [ -z "$matchedfiles" ]; then
+    echo "no matched files"
+    exit 0
+  fi
+fi
+if [ -n "$exclude" ]; then
+  excludefiles=`find . -path $exclude`
+fi
+SAVEIFS=$IFS
+IFS=$(echo -en "\n\b")
+if [ "$dryrun" = y ]; then
+  echo "DRY RUN"
+fi
+for file in $(find . -name \*.$type); do
+  if [ -n "$exclude" -a -n "`echo $excludefiles | grep $file`" ]; then
+    # skip excluded files
+    continue
+  elif [ -n "$match" -a -z "`echo $matchedfiles | grep $file`" ]; then
+    # skip unmatched files
+    continue
+  fi
+  src="$file"
+  if [ "$relative_output" = y ]; then
+    output="`dirname $file`/$destdir/`basename $file`"
+  else
+    output="$destdir/$file"
+  fi
+  echo -e "\nSOURCE: $file\nOUTPUT: $output"
+  if [ -z "$dryrun" ]; then
+    mkdir -p "`dirname "$output"`"
+    if [ "$zoom" = y ]; then
+      convert "$src" -resize ${size}^ -gravity Center -crop $size+0+0 -quality $quality $output
+    else
+      convert "$src" -resize $size -quality $quality $output
+    fi
+  fi
+done
+IFS=$SAVEIFS
