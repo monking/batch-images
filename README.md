@@ -1,8 +1,12 @@
-# convert-batch
+# batch-images
+
+A couple scripts to batch convert images.
+
+## convert-batch
 
 A script to automate ImageMagick's `convert` command recursively in a directory.
 
-## Options
+### Options
 
 `-d` **dimensions** (required)  
 Output image dimensions, following the [Image
@@ -41,7 +45,7 @@ preserved.
 Print the source and output filenames without writing any files or creating any
 directories.
 
-## Examples
+### Examples
 
 `convert-batch -lo export -d 24%`  
 Resizes all images to 24% of original (300ppi to 72ppi), and saves the new
@@ -51,10 +55,19 @@ files in a new `export` subdirectory relative to each image.
 Resize all images ending in `.jpg` to 1280px wide, preserving image aspect,
 and add the suffix `_1280` before the file extension.
 
-## Requirements
+### Requirements
 
 ImageMagick with CLI. Install on HomeBrew on Mac with `brew install
 imagemagick`.
 
-Perl, for regular expression processing (included in most *NIX installations,
+Perl, for regular expression processing (included in most \*NIX installations,
 such as GNU Linux and Mac).
+
+## enc-series
+
+Use `avconv` or `ffmpeg` to encode series of images into video.
+
+### usage
+
+    enc-series [-r <framerate>] [-b <bitrate>] [-e <source file extension]
+    [-g] <source-path> <output-path>
