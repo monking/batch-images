@@ -5,14 +5,14 @@ script_name=`basename $0`
 framerate=29.97
 bitrate=500k
 src_extension=.jpg
-use_ffmpeg=n
+overwrite=n
 
-while getopts "r:b:e:g" flag; do
+while getopts "r:b:e:w" flag; do
   case $flag in
     r ) framerate=$OPTARG;;
     b ) bitrate=$OPTARG;;
     e ) src_extension=$OPTARG;;
-    g ) use_ffmpeg=y;;
+    w ) overwrite=y;;
   esac
 done
 shift $((OPTIND-1)); OPTIND=1
@@ -20,40 +20,40 @@ shift $((OPTIND-1)); OPTIND=1
 src_path=$1
 out_path=$2
 
-# FIXME: detect if neither avconv or ffmpeg is installed
-# if [ hash avconv 2>/dev/null ]; then
-#   if [ hash ffmpeg 2>/dev/null  ]; then
-#     echo "no avconv: using ffmpeg"
-#     use_ffmpeg=y
-#   else
-#     echo "$script_name requires either avconv or ffmpeg"
-#     exit 0
-#   fi
-# fi
-
 if [ -z "$src_path" -o -z "$out_path" ]; then
-  echo "USAGE:
-  $script_name [-r <framerate>] [-b <bitrate>] [-e <source file extension]
-  [-g] <source-path> <output-path>"
+  echo "\
+USAGE:
+  $script_name [options] <source-path> <output-path>
+
+OPTIONS:
+  -r <framerate>
+
+  -b <bitrate>
+      a number with the units k or M
+
+  -e <source extension>
+      default .jpg
+
+  -w  do not skip existing video files. avconv/ffmpeg will request
+  confirmation."
   exit 0
 fi
 
 out_path=$(dirname $out_path)/$(basename $out_path)
 
 function encode_one_series() {
-  local name output overwrite src tmp wd
+  local name output src tmp wd
   src=$(cd $1; pwd)
   name=$(basename $src)
   output=$out_path/$name.mp4
   tmp=/tmp/enc-series
 
-  echo "encoding $output"
-  if [ -e $output ]; then
-    read -n 1 -p "File exists; overwrite? [y/N] " overwrite && echo -en "\n"
-    if [[ $overwrite =~ ^[Nn]*$ ]]; then
-      return 0
-    fi
+  if [ -e $output -a $overwrite != y ]; then
+    echo "$output exists, use -w to overwrite"
+    return 0
   fi
+
+  echo "encoding $output"
 
   rm -rf $tmp/*
   mkdir -p $tmp
@@ -69,14 +69,16 @@ function encode_one_series() {
     ln -s $file $tmp/$padded$src_extension
   done
 
-  if [ $use_ffmpeg = y ]; then
-    ffmpeg \
-      -r $framerate \
-      -i $tmp/%6d$src_extension \
-      -b $bitrate \
-      -vcodec libx264 \
-      $output
-  else
+# FIXME: detect if neither avconv or ffmpeg is installed
+# if [ hash avconv 2>/dev/null ]; then
+#   if [ hash ffmpeg 2>/dev/null  ]; then
+#     ffmpeg \
+#       -r $framerate \
+#       -i $tmp/%6d$src_extension \
+#       -b $bitrate \
+#       -vcodec libx264 \
+#       $output
+#   else
     avconv \
       -r $framerate \
       -i $tmp/%06d$src_extension \
@@ -84,7 +86,10 @@ function encode_one_series() {
       -c\:v libx264 \
       $output
     # TODO; enable 2-pass encoding
-  fi
+#     echo "$script_name requires either avconv or ffmpeg"
+#     exit 0
+#   fi
+# fi
 }
 if [ -n "$(ls -d $src_path/*/)" ]; then
   read -n 1 -p "Encode each subdirectory as a video? [Y/n] " encode_each && echo -en "\n"
