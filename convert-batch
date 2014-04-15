@@ -1,5 +1,6 @@
 #!/bin/bash
-while getopts "d:f:m:o:q:x:s:r:znl" flag
+dirStructure=same
+while getopts "d:f:m:o:q:x:s:r:znlt" flag
 do
   case $flag in
     d ) size=$OPTARG;;
@@ -11,7 +12,8 @@ do
     r ) replace=$OPTARG;;
     z ) zoom=y;;
     n ) dryrun=y;;
-    l ) relative_output=y;;
+    l ) dirStructure=relative;;
+    t ) dirStructure=flat;;
   esac
 done
 shift $((OPTIND-1)); OPTIND=1
@@ -30,6 +32,8 @@ OPTIONS:
       be copied. Without this option, images are resized in place.
   -l  Output directory is created relative to each file. If -e is not given, it
       is set to exclude this directory.
+  -t  Output files are put in the same directory, ignoring the source
+      directory's structure
   -q  Quality, 0-100, default 70.
   -e  Exclude file pattern. If -l is used, this defaults to exclude that
       path.
@@ -42,14 +46,14 @@ OPTIONS:
 fi
 wd=`pwd`
 if [ -z "$sourcedir" ]; then sourcedir="$wd"; fi
-if [ -z "$destdir" -a -z "$relative_output" ]; then destdir="$sourcedir"; fi
+if [ -z "$destdir" -a "$dirStructure" != relative ]; then destdir="$sourcedir"; fi
 if [ -z "$match" ]; then match=\*.jpg; fi
 if [ -z "$quality" ]; then quality=70; fi
-if [ -n "$destdir" -a -z "$relative_output" -a ${destdir:0:1} != "/" ]; then
+if [ -n "$destdir" -a "$dirStructure" != relative -a ${destdir:0:1} != "/" ]; then
   # -r not set, make destdir an absolute path
   destdir="$wd/$destdir"
 fi
-if [ "$relative_output" = y -a -z "$exclude" ]; then
+if [ "$dirStructure" = relative -a -z "$exclude" ]; then
   exclude=\*$destdir\*
 fi
 cd "$sourcedir"
@@ -72,10 +76,12 @@ for file in $(find . -path "$match"); do
   else
     output_basename=`basename $file`
   fi
-  if [ "$relative_output" = y ]; then
+  if [ "$dirStructure" = relative ]; then
     output="`dirname $file`/$destdir/$output_basename"
-  else
+  elif [ "$dirStructure" = flat ]; then
     output="$destdir/$output_basename"
+  else
+    output="$destdir/$src"
   fi
   echo -e "\nSOURCE: $file\nOUTPUT: $output"
   if [ -z "$dryrun" ]; then
