@@ -7,8 +7,9 @@ bitrate=500k
 src_extension=.jpg
 overwrite=n
 
-while getopts "r:b:e:w" flag; do
+while getopts "ar:b:e:w" flag; do
   case $flag in
+    a ) recurse=y;;
     r ) framerate=$OPTARG;;
     b ) bitrate=$OPTARG;;
     e ) src_extension=$OPTARG;;
@@ -20,12 +21,14 @@ shift $((OPTIND-1)); OPTIND=1
 src_path=$1
 out_path=$2
 
-if [ -z "$src_path" -o -z "$out_path" ]; then
+if [[ -z $src_path || -z $out_path ]]; then
   echo "\
 USAGE:
   $script_name [options] <source-path> <output-path>
 
 OPTIONS:
+  -a encode subdirectories as videos without prompting.
+
   -r <framerate>
 
   -b <bitrate>
@@ -92,8 +95,13 @@ function encode_one_series() {
 # fi
 }
 if [ -n "$(ls -d $src_path/*/)" ]; then
-  read -n 1 -p "Encode each subdirectory as a video? [Y/n] " encode_each && echo -en "\n"
-  if [[ $encode_each =~ ^[Yy]*$ ]]; then
+  if [[ -z $recurse ]]; then
+    read -n 1 -p "Encode each subdirectory as a video? [Y/n] " && echo -en "\n"
+    if [[ $REPLY =~ ^[Yy]*$ ]]; then
+      recurse=y
+    fi
+  fi
+  if [[ y = $recurse ]]; then
     for subdir in $(ls -d $src_path/*/); do
       encode_one_series $subdir
     done
