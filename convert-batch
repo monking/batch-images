@@ -22,18 +22,19 @@ destdir=$2
 
 if [[ y = $help || -z $sourcedir ]]; then
   echo "USAGE: batch_jpeg [ -s <geometry> ] [ -z ] [ -q <quality (70)> ]
-       [ -m <match pattern (*.jpg)> ] [ -e <exclude pattern> ] [ -l ] [ -n ]
+       [ -m <match pattern (*.jpg)> ] [ -x <exclude pattern> ] [ -l ] [ -n ]
        <source dir> [ <destination dir> ]
 
 OPTIONS:
 
   -s  Output image size, as <width>x<height>.
+      http://www.imagemagick.org/script/command-line-processing.php#geometry
 
   -h  Show this information.
 
   -m  Pattern to match files for processing, default *.jpg.
 
-  -l  Output directory is created relative to each file. If -e is not given, it
+  -l  Output directory is created relative to each file. If -x is not given, it
       is set to exclude this directory.
 
   -t  Output files are put in the same directory, ignoring the source
@@ -41,7 +42,7 @@ OPTIONS:
 
   -q  Quality, 0-100, default 70.
 
-  -e  Exclude file pattern. If -l is used, this defaults to exclude that
+  -x  Exclude file pattern. If -l is used, this defaults to exclude that
       path.
 
   -r  PERL regular expression to transform the output filenames.

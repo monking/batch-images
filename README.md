@@ -8,30 +8,26 @@ A script to automate ImageMagick's `convert` command recursively in a directory.
 
 ### Options
 
-`-d` **dimensions** (required)  
+All images in the `<source directory>` and subdirectories, except those
+excluded with `-x`, are processed. If no `<output directory>` is given, the
+images are converted in place.
+
+`-s` **dimensions** (required)  
 Output image dimensions, following the [Image
 Geometry](http://www.imagemagick.org/script/command-line-processing.php#geometry)
 format for `convert`, usually `<width>x<height>`.
 
-`-f` **from**  
-All images in this directory and subdirectories, except those excluded with
-`-x`, are processed. Defaults to the current directory.
-
 `-m` **match**  
 Pattern to match files for processing, default `*.jpg`.
 
-`-o` **output**  
-Output directory. The subdirectory structure of the source directory will be
-copied. Without this option, images are resized in place.
-
 `-l` **relative output**  
-Output directory is created relative to each file. If `-e` is not given, it is
+Output directory is created relative to each file. If `-x` is not given, it is
 set to exclude this directory.
 
 `-q` **quality**  
 Quality, `0`-`100`, default `70`.
 
-`-e` **exclude**  
+`-x` **exclude**  
 Exclude file pattern. If `-l` is used, this defaults to exclude that path.
 
 `-r` **RegExp**  
@@ -47,7 +43,7 @@ directories.
 
 ### Examples
 
-`convert-batch -lo export -d 24%`  
+`convert-batch -l -d 24% export`  
 Resizes all images to 24% of original (300ppi to 72ppi), and saves the new
 files in a new `export` subdirectory relative to each image.
 
@@ -63,11 +59,11 @@ imagemagick`.
 Perl, for regular expression processing (included in most \*NIX installations,
 such as GNU Linux and Mac).
 
-## enc-series
+## encode-batch
 
 Use `avconv` or `ffmpeg` to encode series of images into video.
 
 ### usage
 
-    enc-series [-r <framerate>] [-b <bitrate>] [-e <source file extension]
+    encode-batch [-r <framerate>] [-b <bitrate>] [-e <source file extension]
     [-g] <source-path> <output-path>
